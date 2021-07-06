@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using JobPortalApp.API.Model;
 using JobPortalApp.Domain;
@@ -40,15 +41,24 @@ namespace JobPortalApp.API.Controllers
         [ProducesResponseType(StatusCodes.Status201Created)]
         public async Task<ActionResult<ApiResponse>> Add(CandidateRequest candidateRequest)
         {
-            //Validation
-            if (!ModelState.IsValid)
-                return BadRequest();
+            try
+            {
+                //Validation
+                if (!ModelState.IsValid)
+                    return BadRequest();
 
-            //Add to DB
-            await _candidateService.Add(candidateRequest.BuildRequest());
-            
-            //Return
-            return Created("", new ApiResponse { Message = "Candidate has been added successfully" });
+                //Add to DB
+                await _candidateService.Add(candidateRequest.BuildRequest());
+
+                //Return
+                return Created("", new ApiResponse {Message = "Candidate has been added successfully"});
+            }
+            catch (Exception e)
+            {
+                //LOG The Exception
+                return StatusCode(StatusCodes.Status500InternalServerError);
+            }
+
         }
 
 
@@ -63,23 +73,32 @@ namespace JobPortalApp.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<CandidateRequest>> Search([FromQuery] string skills)
         {
-            //Validation
-            if (string.IsNullOrWhiteSpace(skills))
-                return BadRequest();
+            try
+            {
+                //Validation
+                if (string.IsNullOrWhiteSpace(skills))
+                    return BadRequest();
 
-            //Get filtered candidates by skills
-            var candidates = await _filterCandidate.Filter(await _candidateService.GetCandidates(),
-                new SkillsSpecification(skills.Split(',').ToList()));
+                //Get filtered candidates by skills
+                var candidates = await _filterCandidate.Filter(await _candidateService.GetCandidates(),
+                    new SkillsSpecification(skills.Split(',').ToList()));
 
-            //No data found
-            if (candidates == null || !candidates.Any())
-                return NotFound();
-            
-            //Get Top matching record
-            var result = candidates.FirstOrDefault();
-            var candidateRequest = new CandidateRequest();
-            candidateRequest.BuildResponse(result);
-            return Ok(candidateRequest);
+                //No data found
+                if (candidates == null || !candidates.Any())
+                    return NotFound();
+
+                //Get Top matching record
+                var result = candidates.FirstOrDefault();
+                var candidateRequest = new CandidateRequest();
+                candidateRequest.BuildResponse(result);
+                return Ok(candidateRequest);
+
+            }
+            catch (Exception e)
+            {
+                //LOG The Exception
+                return StatusCode(StatusCodes.Status500InternalServerError);
+            }
         }
     }
 }
